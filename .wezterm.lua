@@ -1,51 +1,40 @@
 local wezterm = require 'wezterm'
 
--- This will hold the configuration.
 local config = wezterm.config_builder()
 
--- Font and Style
 config.font = wezterm.font_with_fallback({
-  "JetBrains Mono",      -- Primary font
-  "Fira Code",           -- Fallback font for icons and symbols
+  "JetBrains Mono",
+  "Fira Code",
 })
-config.font_size = 12.0  -- Adjust font size
+config.font_size = 13.0
 
--- Enable ligatures for clean code representation
 config.harfbuzz_features = {"calt=1", "clig=1", "liga=1"}
 
--- Window background transparency
-config.window_background_opacity = 0.8  -- Slight transparency for modern look
+config.window_background_opacity = 0.85
 
--- Color Scheme
 config.color_scheme = 'Catppuccin Mocha'
 
--- Custom Color Scheme (Optional)
 config.colors = {
-  foreground = "#cdd6f4", -- Main text color
-  background = "#1e1e2e", -- Dark background with blueish tint
-
-  -- Tab Bar Colors
+  foreground = "#ffffff",
+  background = "#1e1e2e",
   tab_bar = {
-    background = "#1e1e2e",  -- Overall background color of the tab bar
+    background = "#1e1e2e",
     active_tab = {
       bg_color = "#3b3052",
-      fg_color = "#cdd6f4",
+      fg_color = "#ffffff",
       intensity = "Bold",
     },
     inactive_tab = {
       bg_color = "#1e1e2e",
-      fg_color = "#cdd6f4",
+      fg_color = "#ffffff",
     },
     new_tab = {
       bg_color = "#1e1e2e",
-      fg_color = "#cdd6f4",
+      fg_color = "#ffffff",
     },
   },
 }
 
-
-
--- Window Padding for better visual experience
 config.window_padding = {
   left = 5,
   right = 5,
@@ -53,7 +42,7 @@ config.window_padding = {
   bottom = 5,
 }
 
--- Add Background Image
+-- Add Background Image add your path here and uncomment below line
 -- config.window_background_image = '/home/shoaib/wget-images/pngtree-render-of-a-futuristic-holographic-cyborg-with-abstract-furistic-technology-solana-image_13555710.png'
 
 -- Image appearance customization
@@ -63,40 +52,33 @@ config.window_background_image_hsb = {
   saturation = 1.0,
 }
 
--- Enable smooth scrolling and GPU rendering
-config.front_end = "WebGpu"  -- Use GPU rendering for faster performance
-config.scrollback_lines = 10000  -- Allow for more scrollback in the terminal
 
--- Cursor Settings
-config.cursor_blink_rate = 500  -- Blink rate in milliseconds
-config.cursor_thickness = 2      -- Set cursor thickness (use thickness instead of shape)
+config.front_end = "WebGpu"
+config.scrollback_lines = 10000
 
--- Tab Bar Customization
-config.tab_bar_at_bottom = true
+config.cursor_blink_rate = 500
+config.cursor_thickness = 2
+
+config.tab_bar_at_bottom = false
 config.use_fancy_tab_bar = true
-config.hide_tab_bar_if_only_one_tab = false  -- Always show the tab bar
-config.show_tabs_in_tab_bar = true           -- Show tabs in the tab bar
-config.show_new_tab_button_in_tab_bar = true -- Show the default new tab button
+config.hide_tab_bar_if_only_one_tab = false
+config.show_tabs_in_tab_bar = true
+config.show_new_tab_button_in_tab_bar = true
 
--- Increase the thickness of the split lines
 config.window_decorations = "RESIZE"
 
--- Configure inactive pane styling for separation
 config.inactive_pane_hsb = {
-  brightness = 0.3, -- Reduce brightness of inactive panes for better separation
+  brightness = 0.3,
 }
 
--- Keybindings for easier navigation and pane management
 config.keys = {
-  {key="t", mods="CTRL", action=wezterm.action.SpawnTab("CurrentPaneDomain")}, -- New Tab
-  {key="h", mods="CTRL|SHIFT", action=wezterm.action.SplitHorizontal({domain="CurrentPaneDomain"})}, -- Split horizontally
-  {key="l", mods="CTRL|SHIFT", action=wezterm.action.SplitVertical({domain="CurrentPaneDomain"})}, -- Split vertically
-  {key="w", mods="CTRL", action=wezterm.action.CloseCurrentPane({confirm=false})}, -- Close current pane
-  {key="w", mods="CTRL|SHIFT", action=wezterm.action.CloseCurrentTab({confirm=false})}, -- Close current tab
-  {key="v", mods="CTRL", action=wezterm.action.PasteFrom("Clipboard")}, -- Paste
+  {key="t", mods="CTRL", action=wezterm.action.SpawnTab("CurrentPaneDomain")},
+  {key="h", mods="CTRL|SHIFT", action=wezterm.action.SplitHorizontal({domain="CurrentPaneDomain"})},
+  {key="l", mods="CTRL|SHIFT", action=wezterm.action.SplitVertical({domain="CurrentPaneDomain"})},
+  {key="w", mods="CTRL", action=wezterm.action.CloseCurrentPane({confirm=false})},
+  {key="w", mods="CTRL|SHIFT", action=wezterm.action.CloseCurrentTab({confirm=false})},
+  {key="v", mods="CTRL", action=wezterm.action.PasteFrom("Clipboard")},
   {key="c", mods="CTRL", action=wezterm.action.CopyTo("Clipboard")},
 }
 
--- and finally, return the configuration to wezterm
 return config
-

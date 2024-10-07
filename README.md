@@ -1,6 +1,24 @@
 # WezTerm Configuration
 
-This is a custom configuration for [WezTerm](https://wezfurlong.org/wezterm/), a GPU-accelerated terminal emulator and multiplexer written in Rust. This configuration aims to provide a visually appealing and user-friendly terminal experience.
+## Installation
+
+Installation Steps for WezTerm on Ubuntu
+Open the Terminal.
+
+1. **Update your package list:**:
+
+sudo apt update
+
+Install WezTerm: You can install WezTerm using the following command:
+
+2. **Install the terminal:**:
+
+sudo apt install wezterm
+
+Verify Installation: To confirm that WezTerm was installed correctly, you can run:
+
+wezterm --version
+This command should output the installed version of WezTerm.
 
 ## Features
 
@@ -15,17 +33,13 @@ This is a custom configuration for [WezTerm](https://wezfurlong.org/wezterm/), a
 - **Tab Bar Customization**: Positions the tab bar at the bottom and always shows it, even with one tab.
 - **Keybindings**: Custom keybindings for easy navigation and pane management.
 
-## Installation
-
-1. **Install WezTerm**:
-   Follow the installation instructions on the [WezTerm GitHub page](https://github.com/wez/wezterm#installing).
-
 2. **Clone the Configuration**:
    Clone this repository or copy the configuration file to your WezTerm configuration directory:
    ```bash
    mkdir -p ~/.config/wezterm
    cp path/to/this/config.lua ~/.config/wezterm/
-   ```
+
+   <!-- it should be your ubuntu / root directory -->
 
 3. **Launch WezTerm**:
    Open WezTerm to see the new configuration in action.
