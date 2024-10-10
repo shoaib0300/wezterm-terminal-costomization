@@ -7,13 +7,13 @@ Open the Terminal.
 
 1. **Update your package list:**:
 
-sudo apt update
+**sudo apt update**
 
 Install WezTerm: You can install WezTerm using the following command:
 
 2. **Install the terminal:**:
 
-sudo apt install wezterm
+**sudo apt install wezterm **
 
 Verify Installation: To confirm that WezTerm was installed correctly, you can run:
 
