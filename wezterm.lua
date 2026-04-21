@@ -3,7 +3,7 @@ local config = wezterm.config_builder()
 local home = wezterm.home_dir
 
 local image_dir = home .. "/.config/wezterm/wget-images/"
-local rotate_every_seconds = 60
+local rotate_every_seconds = 1 * 60
 
 local background_images = {
   "104787.jpg",
@@ -21,13 +21,15 @@ local background_images = {
   "SL_102419_24410_32.jpg",
 }
 
-math.randomseed(os.time())
-
-local function image_path(i)
-  return image_dir .. background_images[i]
+local function image_path(index)
+  return image_dir .. background_images[index]
 end
 
 local function next_index(current)
+  if #background_images <= 1 then
+    return 1
+  end
+
   local idx = current
   while idx == current do
     idx = math.random(#background_images)
@@ -35,39 +37,80 @@ local function next_index(current)
   return idx
 end
 
-wezterm.GLOBAL.wallpaper = wezterm.GLOBAL.wallpaper or {
-  index = math.random(#background_images),
-  last_update = os.time(),
+math.randomseed(os.time())
+wezterm.GLOBAL.wallpaper_rotation = wezterm.GLOBAL.wallpaper_rotation or {
+  timer_token = 0,
+  window_state = {},
+  last_global_index = nil,
 }
 
-local state = wezterm.GLOBAL.wallpaper
+local wallpaper_rotation = wezterm.GLOBAL.wallpaper_rotation
+local window_rotation_state = wallpaper_rotation.window_state
 
-local function apply(window)
+local function set_window_image(window, index)
   local overrides = window:get_config_overrides() or {}
-  overrides.window_background_image = image_path(state.index)
+  overrides.window_background_image = image_path(index)
   window:set_config_overrides(overrides)
 end
 
-local function rotate()
-  if not wezterm.gui then return end
+local function pick_initial_index()
+  if #background_images <= 1 then
+    return 1
+  end
+
+  local idx = math.random(#background_images)
+  while idx == wallpaper_rotation.last_global_index do
+    idx = math.random(#background_images)
+  end
+  return idx
+end
+
+local function ensure_window_state(window)
+  local id = window:window_id()
+  local state = window_rotation_state[id]
+  if state then
+    return state
+  end
+
+  local idx = pick_initial_index()
+  state = { index = idx, changed_at = os.time() }
+  window_rotation_state[id] = state
+  wallpaper_rotation.last_global_index = idx
+  set_window_image(window, idx)
+  return state
+end
+
+local function rotation_tick(token)
+  if wallpaper_rotation.timer_token ~= token then
+    return
+  end
 
   local now = os.time()
-
-  if now - state.last_update >= rotate_every_seconds then
-    state.index = next_index(state.index)
-    state.last_update = now
-
-    for _, window in ipairs(wezterm.gui.gui_windows()) do
-      apply(window)
+  local gui = wezterm.gui
+  if gui then
+    for _, window in ipairs(gui.gui_windows()) do
+      local state = ensure_window_state(window)
+      if now - state.changed_at >= rotate_every_seconds then
+        state.index = next_index(state.index)
+        state.changed_at = now
+        wallpaper_rotation.last_global_index = state.index
+        set_window_image(window, state.index)
+      end
     end
   end
 
-  wezterm.time.call_after(1, rotate)
+  wezterm.time.call_after(1.0, function()
+    rotation_tick(token)
+  end)
 end
 
-wezterm.on("gui-startup", function()
-  wezterm.time.call_after(1, rotate)
-end)
+if wezterm.gui then
+  wallpaper_rotation.timer_token = wallpaper_rotation.timer_token + 1
+  local token = wallpaper_rotation.timer_token
+  wezterm.time.call_after(0.2, function()
+    rotation_tick(token)
+  end)
+end
 
 -- Shell
 config.default_prog = { "/usr/bin/zsh", "-l" }
@@ -78,18 +121,85 @@ config.font = wezterm.font_with_fallback({
   "Fira Code",
 })
 config.font_size = 13.0
+config.harfbuzz_features = { "calt=1", "clig=1", "liga=1" }
 
 -- Window
 config.window_decorations = "TITLE | RESIZE"
+config.enable_scroll_bar = false
 config.window_padding = { left = 8, right = 8, top = 8, bottom = 8 }
 
 config.window_background_opacity = 1.0
-config.window_background_image = image_path(state.index)
+config.window_background_image = image_path(1)
 
 config.window_background_image_hsb = {
   brightness = 0.2,
   hue = 1.0,
   saturation = 1.0,
+}
+
+-- Cursor
+config.default_cursor_style = "BlinkingBlock"
+config.cursor_blink_rate = 450
+
+-- Colors
+config.colors = {
+  foreground = "#9CFFB5",
+  background = "#050A06",
+  cursor_bg = "#00FF66",
+  cursor_fg = "#001B0A",
+  cursor_border = "#00FF66",
+  selection_fg = "#001B0A",
+  selection_bg = "#57FF9A",
+  ansi = {
+    "#06150B", "#FF3B30", "#00FF66", "#FFD60A",
+    "#0A84FF", "#BF5AF2", "#64D2FF", "#C7FCD1",
+  },
+  brights = {
+    "#0A2A14", "#FF453A", "#30FF86", "#FFE44D",
+    "#5EAEFF", "#DA8FFF", "#9BE7FF", "#E7FFE9",
+  },
+  tab_bar = {
+    background = "#050A06",
+    active_tab = {
+      bg_color = "#0A2A14",
+      fg_color = "#9CFFB5",
+      intensity = "Bold",
+    },
+    inactive_tab = {
+      bg_color = "#050A06",
+      fg_color = "#5CCF85",
+    },
+    new_tab = {
+      bg_color = "#050A06",
+      fg_color = "#00FF66",
+    },
+  },
+}
+
+-- Performance
+config.front_end = "OpenGL"
+config.scrollback_lines = 10000
+
+-- Tabs
+config.use_fancy_tab_bar = true
+config.hide_tab_bar_if_only_one_tab = false
+
+-- Keys
+config.keys = {
+  { key = "t", mods = "CTRL", action = wezterm.action.SpawnTab("CurrentPaneDomain") },
+  { key = "h", mods = "CTRL|SHIFT", action = wezterm.action.SplitHorizontal({ domain = "CurrentPaneDomain" }) },
+  { key = "l", mods = "CTRL|SHIFT", action = wezterm.action.SplitVertical({ domain = "CurrentPaneDomain" }) },
+  { key = "w", mods = "CTRL", action = wezterm.action.CloseCurrentPane({ confirm = false }) },
+  { key = "w", mods = "CTRL|SHIFT", action = wezterm.action.CloseCurrentTab({ confirm = false }) },
+  { key = "c", mods = "CTRL", action = wezterm.action.CopyTo("Clipboard") },
+  { key = "v", mods = "CTRL", action = wezterm.action.PasteFrom("Clipboard") },
+  {
+    key = "A",
+    mods = "CTRL|SHIFT",
+    action = wezterm.action.SpawnCommandInNewTab({
+      args = { "codex" },
+    }),
+  },
 }
 
 return config
