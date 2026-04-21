@@ -39,30 +39,54 @@ end
 
 math.randomseed(os.time())
 local window_rotation_state = {}
+local last_global_index = nil
 
-wezterm.on("update-status", function(window, _)
-  local id = window:window_id()
+local function set_window_image(window, index)
+  local overrides = window:get_config_overrides() or {}
+  overrides.window_background_image = image_path(index)
+  window:set_config_overrides(overrides)
+end
+
+local function pick_initial_index()
+  if #background_images <= 1 then
+    return 1
+  end
+
+  local idx = math.random(#background_images)
+  while idx == last_global_index do
+    idx = math.random(#background_images)
+  end
+  return idx
+end
+
+local function rotation_tick()
   local now = os.time()
-  local state = window_rotation_state[id]
+  local gui = wezterm.gui
+  if gui then
+    for _, window in ipairs(gui.gui_windows()) do
+      local id = window:window_id()
+      local state = window_rotation_state[id]
 
-  if not state then
-    state = {
-      index = math.random(#background_images),
-      changed_at = 0,
-    }
-    window_rotation_state[id] = state
-  end
-
-  if now - state.changed_at >= rotate_every_seconds then
-    if state.changed_at ~= 0 then
-      state.index = next_index(state.index)
+      if not state then
+        local idx = pick_initial_index()
+        state = { index = idx, changed_at = now }
+        window_rotation_state[id] = state
+        last_global_index = idx
+        set_window_image(window, idx)
+      elseif now - state.changed_at >= rotate_every_seconds then
+        state.index = next_index(state.index)
+        state.changed_at = now
+        last_global_index = state.index
+        set_window_image(window, state.index)
+      end
     end
-    state.changed_at = now
-
-    local overrides = window:get_config_overrides() or {}
-    overrides.window_background_image = image_path(state.index)
-    window:set_config_overrides(overrides)
   end
+
+  wezterm.time.call_after(1.0, rotation_tick)
+end
+
+wezterm.on("gui-startup", function()
+  rotation_tick()
 end)
 
 -- Shell
@@ -139,7 +163,6 @@ config.colors = {
 -- Performance (more stable on Pop!_OS)
 config.front_end = "OpenGL"
 config.scrollback_lines = 10000
-config.status_update_interval = 1000
 
 -- Tabs
 config.use_fancy_tab_bar = true
