@@ -57,34 +57,31 @@ local function pick_initial_index()
   return idx
 end
 
-local function rotation_tick()
-  local now = os.time()
-  local gui = wezterm.gui
-  if gui then
-    for _, window in ipairs(gui.gui_windows()) do
-      local id = window:window_id()
-      local state = window_rotation_state[id]
-
-      if not state then
-        local idx = pick_initial_index()
-        state = { index = idx, changed_at = now }
-        window_rotation_state[id] = state
-        last_global_index = idx
-        set_window_image(window, idx)
-      elseif now - state.changed_at >= rotate_every_seconds then
-        state.index = next_index(state.index)
-        state.changed_at = now
-        last_global_index = state.index
-        set_window_image(window, state.index)
-      end
-    end
+local function ensure_window_state(window)
+  local id = window:window_id()
+  local state = window_rotation_state[id]
+  if state then
+    return state
   end
 
-  wezterm.time.call_after(1.0, rotation_tick)
+  local idx = pick_initial_index()
+  state = { index = idx, changed_at = os.time() }
+  window_rotation_state[id] = state
+  last_global_index = idx
+  set_window_image(window, idx)
+  return state
 end
 
-wezterm.on("gui-startup", function()
-  rotation_tick()
+wezterm.on("update-status", function(window, _)
+  local now = os.time()
+  local state = ensure_window_state(window)
+
+  if now - state.changed_at >= rotate_every_seconds then
+    state.index = next_index(state.index)
+    state.changed_at = now
+    last_global_index = state.index
+    set_window_image(window, state.index)
+  end
 end)
 
 -- Shell
@@ -161,6 +158,7 @@ config.colors = {
 -- Performance (more stable on Pop!_OS)
 config.front_end = "OpenGL"
 config.scrollback_lines = 10000
+config.status_update_interval = 1000
 
 -- Tabs
 config.use_fancy_tab_bar = true
