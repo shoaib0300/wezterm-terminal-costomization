@@ -3,9 +3,9 @@ local config = wezterm.config_builder()
 local home = wezterm.home_dir
 
 local image_dir = home .. "/.config/wezterm/wget-images/"
-local rotate_every_seconds = 1 * 60
+local rotate_every_seconds = 60
 
-local background_images = {
+local images = {
   "104787.jpg",
   "1920-connection-of-human-woman-and-artificial-intelligence-robot-the-concept-of-merging-a-person-and-a-computer-with-neural-networks-in-the-future-ai-generated.jpg",
   "1920-futuristic-beautiful-woman-robot-cyborg-with-metal-implants-on-blurred-background.jpg",
@@ -22,95 +22,48 @@ local background_images = {
 }
 
 local function image_path(index)
-  return image_dir .. background_images[index]
-end
-
-local function next_index(current)
-  if #background_images <= 1 then
-    return 1
-  end
-
-  local idx = current
-  while idx == current do
-    idx = math.random(#background_images)
-  end
-  return idx
+  return image_dir .. images[index]
 end
 
 math.randomseed(os.time())
-wezterm.GLOBAL.wallpaper_rotation = wezterm.GLOBAL.wallpaper_rotation or {
-  timer_token = 0,
-  window_state = {},
-  last_global_index = nil,
-}
+wezterm.GLOBAL.wallpaper_index = wezterm.GLOBAL.wallpaper_index or math.random(#images)
 
-local wallpaper_rotation = wezterm.GLOBAL.wallpaper_rotation
-local window_rotation_state = wallpaper_rotation.window_state
-
-local function set_window_image(window, index)
-  local overrides = window:get_config_overrides() or {}
-  overrides.window_background_image = image_path(index)
-  window:set_config_overrides(overrides)
-end
-
-local function pick_initial_index()
-  if #background_images <= 1 then
-    return 1
-  end
-
-  local idx = math.random(#background_images)
-  while idx == wallpaper_rotation.last_global_index do
-    idx = math.random(#background_images)
+local function next_index(current)
+  if #images <= 1 then return 1 end
+  local idx = current
+  while idx == current do
+    idx = math.random(#images)
   end
   return idx
 end
 
-local function ensure_window_state(window)
-  local id = window:window_id()
-  local state = window_rotation_state[id]
-  if state then
-    return state
-  end
-
-  local idx = pick_initial_index()
-  state = { index = idx, changed_at = os.time() }
-  window_rotation_state[id] = state
-  wallpaper_rotation.last_global_index = idx
-  set_window_image(window, idx)
-  return state
-end
-
-local function rotation_tick(token)
-  if wallpaper_rotation.timer_token ~= token then
-    return
-  end
-
-  local now = os.time()
+local function apply_background(index)
   local gui = wezterm.gui
-  if gui then
-    for _, window in ipairs(gui.gui_windows()) do
-      local state = ensure_window_state(window)
-      if now - state.changed_at >= rotate_every_seconds then
-        state.index = next_index(state.index)
-        state.changed_at = now
-        wallpaper_rotation.last_global_index = state.index
-        set_window_image(window, state.index)
-      end
-    end
+  if not gui then return end
+
+  local img = image_path(index)
+  wezterm.log_info("Switching wallpaper to: " .. img)
+
+  for _, window in ipairs(gui.gui_windows()) do
+    local overrides = window:get_config_overrides() or {}
+    overrides.window_background_image = img
+    window:set_config_overrides(overrides)
   end
+end
 
-  wezterm.time.call_after(1.0, function()
-    rotation_tick(token)
+-- Recursive timer: fires every `rotate_every_seconds` regardless of focus
+local function schedule_rotation()
+  wezterm.time.call_after(rotate_every_seconds, function()
+    wezterm.GLOBAL.wallpaper_index = next_index(wezterm.GLOBAL.wallpaper_index)
+    apply_background(wezterm.GLOBAL.wallpaper_index)
+    schedule_rotation() -- reschedule
   end)
 end
 
-if wezterm.gui then
-  wallpaper_rotation.timer_token = wallpaper_rotation.timer_token + 1
-  local token = wallpaper_rotation.timer_token
-  wezterm.time.call_after(0.2, function()
-    rotation_tick(token)
-  end)
-end
+wezterm.on("gui-startup", function()
+  apply_background(wezterm.GLOBAL.wallpaper_index)
+  schedule_rotation()
+end)
 
 -- Shell
 config.default_prog = { "/usr/bin/zsh", "-l" }
@@ -129,7 +82,8 @@ config.enable_scroll_bar = false
 config.window_padding = { left = 8, right = 8, top = 8, bottom = 8 }
 
 config.window_background_opacity = 1.0
-config.window_background_image = image_path(1)
+config.window_background_image = image_path(wezterm.GLOBAL.wallpaper_index)
+config.status_update_interval = 1000
 
 config.window_background_image_hsb = {
   brightness = 0.2,
